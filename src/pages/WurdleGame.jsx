@@ -5,6 +5,8 @@ import CopyButton from '../components/CopyButton.jsx'
 import { PUZZLES, dailyPuzzle, dayNumber } from '../lib/puzzles.js'
 import { DIFFICULTIES, KEY_ROWS, LETTERS, WORD_LENGTH, hardModeError, isValidWord, keyStates, scoreGuess, shareText, showHint } from '../lib/engine.js'
 import { useWurdle } from '../lib/store.jsx'
+import { useT } from '../lib/i18n.js'
+import { localized } from '../lib/translations.js'
 
 const pickRandom = (not) => {
   const pool = PUZZLES.filter((p) => p.id !== not)
@@ -14,20 +16,23 @@ const pickRandom = (not) => {
 export default function WurdleGame({ mode }) {
   const { n } = useParams()
   const navigate = useNavigate()
+  const t = useT()
   const { data, saveGame } = useWurdle()
   const [practice, setPractice] = useState(() => ({ puzzle: pickRandom(), round: 0 }))
 
   let puzzle, key, title
-  if (mode === 'daily') { puzzle = dailyPuzzle(); key = `daily-${dayNumber()}`; title = 'Daily' }
+  if (mode === 'daily') { puzzle = dailyPuzzle(); key = `daily-${dayNumber()}`; title = 'daily' }
   else if (mode === 'puzzle') { puzzle = PUZZLES.find((p) => p.id === Number(n)); key = `puzzle-${n}`; title = `#${n}` }
-  else { puzzle = practice.puzzle; key = null; title = 'Practice' }
+  else { puzzle = practice.puzzle; key = null; title = 'practice' }
 
-  if (!puzzle) return <p className="empty">Puzzle not found. <Link to="/">Back to Wurdle</Link></p>
+  if (!puzzle) return <p className="empty">Puzzle not found. <Link to="/">{t('backToWurdle')}</Link></p>
   // A fresh component per game so no typing state leaks between puzzles.
   return <Board key={key || `practice-${practice.round}`} {...{ puzzle, gameKey: key, title, mode, data, saveGame, navigate, again: () => setPractice((p) => ({ puzzle: pickRandom(p.puzzle.id), round: p.round + 1 })) }} />
 }
 
 function Board({ puzzle, gameKey, title, mode, data, saveGame, navigate, again }) {
+  const t = useT()
+  const text = localized(puzzle, data.language)
   const saved = gameKey ? data.games[gameKey] : null
   // Difficulty is locked in once the first guess is made, so it can't be switched mid-game.
   const [guesses, setGuesses] = useState(saved?.guesses || [])
@@ -59,10 +64,10 @@ function Board({ puzzle, gameKey, title, mode, data, saveGame, navigate, again }
   const submit = useCallback(() => {
     if (finished || fresh >= 0) return
     const guess = currentRef.current.toUpperCase()
-    if (!isValidWord(guess)) return flash(`Needs ${WORD_LENGTH} letters`)
+    if (!isValidWord(guess)) return flash(t('needs5'))
     if (difficulty === 'hard') {
       const err = hardModeError(guess, guesses, answer)
-      if (err) return flash(err)
+      if (err) return flash(t(err[0], err[1]))
     }
     const next = [...guesses, guess]
     const result = guess === answer ? 'won' : next.length >= tries ? 'lost' : 'playing'
@@ -104,12 +109,12 @@ function Board({ puzzle, gameKey, title, mode, data, saveGame, navigate, again }
     <div className="wurdle wgame" data-cb={data.colorBlind ? '' : undefined}>
       <div className="entry-bar">
         <Link to="/" className="back" aria-label="Back to Wurdle home"><Icon name="chevronL" size={26} /></Link>
-        <div className="wg-title"><strong>{title}</strong><span>{DIFFICULTIES[difficulty].label} · {tries} tries</span></div>
+        <div className="wg-title"><strong>{title === 'daily' || title === 'practice' ? t(title) : title}</strong><span>{t(difficulty)} · {t('tries', { n: tries })}</span></div>
         <Link to="/settings" className="back" aria-label="Wurdle settings"><Icon name="settings" size={22} /></Link>
       </div>
 
       <p className={`wg-hint ${hinted ? '' : 'locked'}`}>
-        {hinted ? <><span>Meaning</span> {puzzle.english}</> : `Meaning unlocks after ${DIFFICULTIES[difficulty].hint === 'never' ? 'the game' : `${DIFFICULTIES[difficulty].hint} guesses`}`}
+        {hinted ? <><span>{t('meaning')}</span> {text.english}</> : DIFFICULTIES[difficulty].hint === 'never' ? t('unlocksEnd') : t('unlocksAfter', { n: DIFFICULTIES[difficulty].hint })}
       </p>
       <div className="wg-toast" role="status">{toast}</div>
 
@@ -127,17 +132,17 @@ function Board({ puzzle, gameKey, title, mode, data, saveGame, navigate, again }
 
       {showEnd ? (
         <div className="wend">
-          <h2>{won ? (guesses.length === 1 ? 'Wow, first try!' : 'Bravo!') : 'Next time!'}</h2>
+          <h2>{won ? (guesses.length === 1 ? t('wow') : t('bravo')) : t('nextTime')}</h2>
           <div className="wend-word">{answer}</div>
           {data.showPron && <div className="wend-pron">{puzzle.pron}</div>}
-          <div className="wend-en">{puzzle.english}</div>
-          <div className="wend-ex"><em>{puzzle.sr}</em><span>{puzzle.en}</span></div>
+          <div className="wend-en">{text.english}</div>
+          <div className="wend-ex"><em>{puzzle.sr}</em>{text.en && <span>{text.en}</span>}</div>
           <div className="wend-actions">
-            <CopyButton text={shareText(title, guesses, answer, tries, won)} label="Share result" />
-            {mode === 'practice' && <button className="wbtn" onClick={again}>Play another</button>}
-            {mode === 'puzzle' && Number(puzzle.id) < PUZZLES.length && <button className="wbtn" onClick={() => navigate(`/puzzle/${puzzle.id + 1}`)}>Next puzzle</button>}
-            {mode !== 'practice' && !(mode === 'puzzle' && Number(puzzle.id) < PUZZLES.length) && <button className="wbtn" onClick={() => navigate('/')}>Back to Wurdle</button>}
-            <Link to="/" className="wlink">Wurdle home</Link>
+            <CopyButton text={shareText(title === 'daily' || title === 'practice' ? t(title) : title, guesses, answer, tries, won)} label={t('share')} />
+            {mode === 'practice' && <button className="wbtn" onClick={again}>{t('playAnother')}</button>}
+            {mode === 'puzzle' && Number(puzzle.id) < PUZZLES.length && <button className="wbtn" onClick={() => navigate(`/puzzle/${puzzle.id + 1}`)}>{t('nextPuzzle')}</button>}
+            {mode !== 'practice' && !(mode === 'puzzle' && Number(puzzle.id) < PUZZLES.length) && <button className="wbtn" onClick={() => navigate('/')}>{t('backToWurdle')}</button>}
+            <Link to="/" className="wlink">{t('wurdleHome')}</Link>
           </div>
         </div>
       ) : (

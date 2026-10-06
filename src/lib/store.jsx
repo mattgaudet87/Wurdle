@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 
 const KEY = 'wurdle-state'
 const EMPTY_STATS = { played: 0, won: 0, streak: 0, best: 0, dist: {} }
-const DEFAULTS = { difficulty: 'normal', colorBlind: false, showPron: true, stats: EMPTY_STATS, games: {} }
+const DEFAULTS = { language: 'en', difficulty: 'normal', colorBlind: false, showPron: true, stats: EMPTY_STATS, games: {} }
 
 const Ctx = createContext(null)
 
@@ -50,7 +50,7 @@ export function WurdleProvider({ children }) {
       return next
     }),
     resetStats: () => setData((d) => ({ ...d, stats: EMPTY_STATS })),
-    resetAll: () => setData((d) => ({ ...DEFAULTS, difficulty: d.difficulty, colorBlind: d.colorBlind, showPron: d.showPron })),
+    resetAll: () => setData((d) => ({ ...DEFAULTS, language: d.language, difficulty: d.difficulty, colorBlind: d.colorBlind, showPron: d.showPron })),
   }), [data])
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

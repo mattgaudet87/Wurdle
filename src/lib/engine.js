@@ -10,9 +10,9 @@ export const KEY_ROWS = [
 export const LETTERS = new Set(KEY_ROWS.flat().filter((k) => k.length === 1))
 
 export const DIFFICULTIES = {
-  easy: { label: 'Easy', tries: 7, hint: 'always', desc: '7 tries. The English meaning is shown from the start.' },
-  normal: { label: 'Normal', tries: 6, hint: 3, desc: '6 tries. The meaning appears after 3 guesses.' },
-  hard: { label: 'Hard', tries: 5, hint: 'never', desc: '5 tries. No meaning until the end, and revealed clues must be reused.' },
+  easy: { tries: 7, hint: 'always' },
+  normal: { tries: 6, hint: 3 },
+  hard: { tries: 5, hint: 'never' },
 }
 
 // Standard two-pass scoring so repeated letters are counted correctly.
@@ -40,15 +40,15 @@ export function keyStates(guesses, answer) {
   return states
 }
 
-// Hard mode: green letters stay in place, yellow letters must appear again. Returns an error message or null.
+// Hard mode: green letters stay in place, yellow letters must appear again. Returns [message key, values] or null.
 export function hardModeError(guess, guesses, answer) {
   const g = [...guess.toLowerCase()]
   for (const prev of guesses) {
     const p = [...prev.toLowerCase()]
     const scores = scoreGuess(prev, answer)
     for (let i = 0; i < p.length; i++) {
-      if (scores[i] === 'correct' && g[i] !== p[i]) return `Letter ${i + 1} must be ${p[i].toUpperCase()}`
-      if (scores[i] === 'present' && !g.includes(p[i])) return `Guess must contain ${p[i].toUpperCase()}`
+      if (scores[i] === 'correct' && g[i] !== p[i]) return ['mustBe', { n: i + 1, l: p[i].toUpperCase() }]
+      if (scores[i] === 'present' && !g.includes(p[i])) return ['mustContain', { l: p[i].toUpperCase() }]
     }
   }
   return null

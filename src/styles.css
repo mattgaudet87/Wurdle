@@ -124,3 +124,5 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .wmodal-card p { margin: 6px 0; font-size: 15px; }
 .wex { display: flex; gap: 6px; justify-content: center; margin: 6px 0; }
 .wex .wtile { --size: 44px; font-size: 22px; }
+
+.langsel { flex: none; max-width: 55%; border: 1px solid var(--line); background: var(--soft); color: var(--ink); border-radius: 12px; padding: 9px 12px; font: inherit; font-size: 14px; }

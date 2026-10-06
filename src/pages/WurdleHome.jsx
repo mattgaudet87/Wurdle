@@ -4,16 +4,18 @@ import Icon from '../components/Icons.jsx'
 import { Segment } from '../components/Controls.jsx'
 import { PUZZLES, dailyPuzzle, dayNumber } from '../lib/puzzles.js'
 import { DIFFICULTIES } from '../lib/engine.js'
+import { useT } from '../lib/i18n.js'
 import { useWurdle } from '../lib/store.jsx'
 
 function Stats({ stats }) {
+  const t = useT()
   const winPct = stats.played ? Math.round((stats.won / stats.played) * 100) : 0
   const rows = [1, 2, 3, 4, 5, 6, 7]
   const max = Math.max(1, ...rows.map((r) => stats.dist[r] || 0))
   return (
     <div className="set-card wstats">
       <div className="wstat-nums">
-        {[[stats.played, 'Played'], [`${winPct}%`, 'Win rate'], [stats.streak, 'Streak'], [stats.best, 'Best streak']].map(([v, l]) => (
+        {[[stats.played, t('played')], [`${winPct}%`, t('winRate')], [stats.streak, t('streak')], [stats.best, t('bestStreak')]].map(([v, l]) => (
           <div key={l}><strong>{v}</strong><span>{l}</span></div>
         ))}
       </div>
@@ -37,15 +39,16 @@ function useFirstVisit() {
 }
 
 function Intro({ onClose }) {
+  const t = useT()
   return (
-    <div className="wmodal" role="dialog" aria-modal="true" aria-label="How to play" onClick={onClose}>
+    <div className="wmodal" role="dialog" aria-modal="true" aria-label={t('howToPlay')} onClick={onClose}>
       <div className="wmodal-card" onClick={(e) => e.stopPropagation()}>
-        <h2>How to play</h2>
-        <p>Guess the 5-letter Serbian word. Each guess shows how close you are:</p>
+        <h2>{t('howToPlay')}</h2>
+        <p>{t('introGuess')}</p>
         <div className="wex"><span className="wtile correct">V</span><span className="wtile">O</span><span className="wtile present">L</span><span className="wtile absent">I</span><span className="wtile">M</span></div>
-        <p><b className="inl correct">Green</b> right letter, right spot. <b className="inl present">Yellow</b> right letter, wrong spot. <b className="inl absent">Gray</b> not in the word.</p>
-        <p>č, ć, š, ž and đ are single letters. Finish a puzzle to learn how to say the word.</p>
-        <button className="copy" onClick={onClose}>Got it</button>
+        <p><b className="inl correct">{t('green')}</b> {t('greenDesc')} <b className="inl present">{t('yellow')}</b> {t('yellowDesc')} <b className="inl absent">{t('gray')}</b> {t('grayDesc')}</p>
+        <p>{t('introLetters')}</p>
+        <button className="copy" onClick={onClose}>{t('gotIt')}</button>
       </div>
     </div>
   )
@@ -53,6 +56,7 @@ function Intro({ onClose }) {
 
 export default function WurdleHome() {
   const [intro, closeIntro] = useFirstVisit()
+  const t = useT()
   const { data, set } = useWurdle()
   const daily = data.games[`daily-${dayNumber()}`]
   const dailyDone = daily && daily.status !== 'playing'
@@ -70,35 +74,35 @@ export default function WurdleHome() {
         <div className="wlogo" aria-label="Wurdle">
           {[...'WURDLE'].map((c, i) => <span key={i} className={['correct', 'present', 'absent'][i % 3]}>{c}</span>)}
         </div>
-        <p>Guess the Serbian word. Learn it for good.</p>
+        <p>{t('tagline')}</p>
       </header>
 
-      <h2 className="group-title">Statistics</h2>
+      <h2 className="group-title">{t('statistics')}</h2>
       <Stats stats={data.stats} />
 
-      <h2 className="group-title">Difficulty</h2>
+      <h2 className="group-title">{t('difficulty')}</h2>
       <div className="set-card">
-        <Segment label="Difficulty" value={data.difficulty} options={Object.entries(DIFFICULTIES).map(([k, d]) => [k, d.label])} onChange={(v) => set({ difficulty: v })} />
+        <Segment label={t('difficulty')} value={data.difficulty} options={Object.keys(DIFFICULTIES).map((k) => [k, t(k)])} onChange={(v) => set({ difficulty: v })} />
       </div>
-      <p className="hint">{DIFFICULTIES[data.difficulty].desc}</p>
+      <p className="hint">{t('desc' + data.difficulty[0].toUpperCase() + data.difficulty.slice(1))}</p>
 
-      <h2 className="group-title">Game modes</h2>
+      <h2 className="group-title">{t('gameModes')}</h2>
       <div className="wmodes">
         <Link to="/daily" className="wmode daily">
-          <span className="wmode-tag">Daily</span>
-          <strong>Today's word</strong>
-          <span>{dailyDone ? (daily.status === 'won' ? `Solved in ${daily.guesses.length}. Come back tomorrow.` : 'Not today. Come back tomorrow.') : daily ? 'In progress, pick up where you left off' : 'One new puzzle every day'}</span>
-          <em>{dailyDone ? 'View result' : daily ? 'Continue' : 'Play'}</em>
+          <span className="wmode-tag">{t('daily')}</span>
+          <strong>{t('todaysWord')}</strong>
+          <span>{dailyDone ? (daily.status === 'won' ? t('solvedIn', { n: daily.guesses.length }) : t('missedToday')) : daily ? t('inProgress') : t('dailySub')}</span>
+          <em>{dailyDone ? t('viewResult') : daily ? t('continue') : t('play')}</em>
         </Link>
         <Link to="/practice" className="wmode">
-          <span className="wmode-tag">Practice</span>
-          <strong>Random word</strong>
-          <span>Doesn't affect your stats</span>
-          <em>Play</em>
+          <span className="wmode-tag">{t('practice')}</span>
+          <strong>{t('randomWord')}</strong>
+          <span>{t('noStats')}</span>
+          <em>{t('play')}</em>
         </Link>
       </div>
 
-      <div className="sheet-head wsh"><h2>Puzzles</h2><span className="muted">{solved} of {PUZZLES.length} solved</span></div>
+      <div className="sheet-head wsh"><h2>{t('puzzles')}</h2><span className="muted">{t('nOfM', { n: solved, m: PUZZLES.length })}</span></div>
       <div className="wpuzzles">
         {PUZZLES.map((p) => {
           const g = data.games[`puzzle-${p.id}`]
@@ -106,20 +110,20 @@ export default function WurdleHome() {
           return (
             <Link key={p.id} to={`/puzzle/${p.id}`} className={`wpz ${st} ${p.id === nextId && !st ? 'next' : ''}`} aria-label={`Puzzle ${p.id}${st ? `, ${st}` : ''}`}>
               <strong>{p.id}</strong>
-              <span>{st === 'won' ? `${g.guesses.length} ✓` : st === 'lost' ? 'missed' : st === 'going' ? '…' : ''}</span>
+              <span>{st === 'won' ? `${g.guesses.length} ✓` : st === 'lost' ? t('missed') : st === 'going' ? '…' : ''}</span>
             </Link>
           )
         })}
       </div>
-      <p className="hint">Play them in any order. Solve all {PUZZLES.length} to see how far you've come.</p>
+      <p className="hint">{t('anyOrder', { m: PUZZLES.length })}</p>
 
       <details className="wrules">
-        <summary>How to play</summary>
+        <summary>{t('howToPlay')}</summary>
         <ul>
-          <li>Guess the 5-letter Serbian word. Type with the on-screen keyboard (č, ć, š, ž and đ each count as one letter).</li>
-          <li><b className="inl correct">Green</b> means right letter, right spot. <b className="inl present">Yellow</b> means the word has it, elsewhere. <b className="inl absent">Gray</b> means it isn't there.</li>
-          <li>Any 5 letters are accepted as a guess; there is no dictionary check.</li>
-          <li>Finish a puzzle to see its pronunciation and an example sentence.</li>
+          <li>{t('rule1')}</li>
+          <li><b className="inl correct">{t('green')}</b> {t('greenDesc')} <b className="inl present">{t('yellow')}</b> {t('yellowDesc')} <b className="inl absent">{t('gray')}</b> {t('grayDesc')}</li>
+          <li>{t('rule3')}</li>
+          <li>{t('rule4')}</li>
         </ul>
       </details>
     </div>
