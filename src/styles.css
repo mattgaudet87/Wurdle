@@ -126,3 +126,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .wex .wtile { --size: 44px; font-size: 22px; }
 
 .langsel { flex: none; max-width: 55%; border: 1px solid var(--line); background: var(--soft); color: var(--ink); border-radius: 12px; padding: 9px 12px; font: inherit; font-size: 14px; }
+.chip.on { background: var(--navy); color: #fff; border-color: var(--navy); }
+.wlangs { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 12px; }
+.wkey { padding: 0 1px; }

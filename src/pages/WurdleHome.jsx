@@ -2,10 +2,10 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import Icon from '../components/Icons.jsx'
 import { Segment } from '../components/Controls.jsx'
-import { PUZZLES, dailyPuzzle, dayNumber } from '../lib/puzzles.js'
+import { puzzlesFor, dayNumber } from '../lib/words/index.js'
 import { DIFFICULTIES } from '../lib/engine.js'
-import { useT } from '../lib/i18n.js'
-import { useWurdle } from '../lib/store.jsx'
+import { LANGUAGES, useT } from '../lib/i18n.js'
+import { useWurdle, EMPTY_STATS } from '../lib/store.jsx'
 
 function Stats({ stats }) {
   const t = useT()
@@ -47,7 +47,7 @@ function Intro({ onClose }) {
         <p>{t('introGuess')}</p>
         <div className="wex"><span className="wtile correct">V</span><span className="wtile">O</span><span className="wtile present">L</span><span className="wtile absent">I</span><span className="wtile">M</span></div>
         <p><b className="inl correct">{t('green')}</b> {t('greenDesc')} <b className="inl present">{t('yellow')}</b> {t('yellowDesc')} <b className="inl absent">{t('gray')}</b> {t('grayDesc')}</p>
-        <p>{t('introLetters')}</p>
+        <p>{t('letterNote')}</p>
         <button className="copy" onClick={onClose}>{t('gotIt')}</button>
       </div>
     </div>
@@ -58,10 +58,13 @@ export default function WurdleHome() {
   const [intro, closeIntro] = useFirstVisit()
   const t = useT()
   const { data, set } = useWurdle()
-  const daily = data.games[`daily-${dayNumber()}`]
+  const lang = data.language
+  const PUZZLES = puzzlesFor(lang)
+  const gameOf = (key) => data.games[`${lang}-${key}`]
+  const daily = gameOf(`daily-${dayNumber()}`)
   const dailyDone = daily && daily.status !== 'playing'
-  const solved = PUZZLES.filter((p) => data.games[`puzzle-${p.id}`]?.status === 'won').length
-  const nextId = (PUZZLES.find((p) => data.games[`puzzle-${p.id}`]?.status !== 'won') || PUZZLES[0]).id
+  const solved = PUZZLES.filter((p) => gameOf(`puzzle-${p.id}`)?.status === 'won').length
+  const nextId = (PUZZLES.find((p) => gameOf(`puzzle-${p.id}`)?.status !== 'won') || PUZZLES[0]).id
 
   return (
     <div className="wurdle" data-cb={data.colorBlind ? '' : undefined}>
@@ -75,10 +78,15 @@ export default function WurdleHome() {
           {[...'WURDLE'].map((c, i) => <span key={i} className={['correct', 'present', 'absent'][i % 3]}>{c}</span>)}
         </div>
         <p>{t('tagline')}</p>
+        <div className="chips wlangs" role="radiogroup" aria-label={t('language')}>
+          {LANGUAGES.map(([code, name]) => (
+            <button key={code} role="radio" aria-checked={lang === code} className={`chip ${lang === code ? 'on' : ''}`} onClick={() => set({ language: code })}>{name}</button>
+          ))}
+        </div>
       </header>
 
       <h2 className="group-title">{t('statistics')}</h2>
-      <Stats stats={data.stats} />
+      <Stats stats={{ ...EMPTY_STATS, ...data.stats[lang] }} />
 
       <h2 className="group-title">{t('difficulty')}</h2>
       <div className="set-card">
@@ -105,7 +113,7 @@ export default function WurdleHome() {
       <div className="sheet-head wsh"><h2>{t('puzzles')}</h2><span className="muted">{t('nOfM', { n: solved, m: PUZZLES.length })}</span></div>
       <div className="wpuzzles">
         {PUZZLES.map((p) => {
-          const g = data.games[`puzzle-${p.id}`]
+          const g = gameOf(`puzzle-${p.id}`)
           const st = g?.status === 'won' ? 'won' : g?.status === 'lost' ? 'lost' : g ? 'going' : ''
           return (
             <Link key={p.id} to={`/puzzle/${p.id}`} className={`wpz ${st} ${p.id === nextId && !st ? 'next' : ''}`} aria-label={`Puzzle ${p.id}${st ? `, ${st}` : ''}`}>
@@ -120,7 +128,7 @@ export default function WurdleHome() {
       <details className="wrules">
         <summary>{t('howToPlay')}</summary>
         <ul>
-          <li>{t('rule1')}</li>
+          <li>{t('rule1')} {t('letterNote')}</li>
           <li><b className="inl correct">{t('green')}</b> {t('greenDesc')} <b className="inl present">{t('yellow')}</b> {t('yellowDesc')} <b className="inl absent">{t('gray')}</b> {t('grayDesc')}</li>
           <li>{t('rule3')}</li>
           <li>{t('rule4')}</li>

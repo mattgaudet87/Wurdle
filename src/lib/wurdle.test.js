@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import { scoreGuess, keyStates, hardModeError, isValidWord } from './engine.js'
-import { PUZZLES, dailyPuzzle } from './puzzles.js'
+import { scoreGuess, keyStates, hardModeError, isValidWord, keyRows, WORD_LENGTH } from './engine.js'
+import { PUZZLES, dailyPuzzle, lettersOf } from './words/index.js'
+import { STR, translate, LANGUAGES } from './i18n.js'
 
-describe('wurdle', () => {
+const CODES = LANGUAGES.map(([c]) => c)
+
+describe('wurdle engine', () => {
   it('scores greens, yellows and grays', () => expect(scoreGuess('MOLIM', 'VOLIM')).toEqual(['absent', 'correct', 'correct', 'correct', 'correct']))
   it('counts repeated letters once per answer letter', () => expect(scoreGuess('ALLAY', 'LABEL')).toEqual(['present', 'present', 'present', 'absent', 'absent']))
   it('keeps the best colour on the keyboard', () => expect(keyStates(['MOLIM', 'VOLIM'], 'VOLIM').m).toBe('correct'))
@@ -11,31 +14,43 @@ describe('wurdle', () => {
     expect(hardModeError('VHALA', ['VOLIM'], 'VOLIM')).toEqual(['mustBe', { n: 2, l: 'O' }])
     expect(hardModeError('VOLIM', ['VOLIM'], 'VOLIM')).toBeNull()
   })
-  it('accepts Serbian letters and rejects others', () => {
-    expect(isValidWord('KAFIĆ')).toBe(true)
-    expect(isValidWord('WATER')).toBe(false)
+  it('checks guesses against the language keyboard', () => {
+    expect(isValidWord('KAFIĆ', 'sr')).toBe(true)
+    expect(isValidWord('KAFIĆ', 'en')).toBe(false)
+    expect(isValidWord('SUEÑO', 'es')).toBe(true)
+    expect(isValidWord('NGƯƠI', 'vi')).toBe(true)
+    expect(isValidWord('WATER', 'en')).toBe(true)
   })
-  it('has thirty valid, unique 5-letter puzzles', () => {
-    expect(PUZZLES).toHaveLength(30)
-    PUZZLES.forEach((p) => { expect(isValidWord(p.word)).toBe(true); expect(p.sr && p.en && p.pron && p.english).toBeTruthy() })
-    expect(new Set(PUZZLES.map((p) => p.word)).size).toBe(30)
-  })
-  it('picks a daily puzzle for any day', () => expect(dailyPuzzle(-3)).toBeTruthy())
 })
 
-import { STR, translate, LANGUAGES } from './i18n.js'
-import { TRANSLATIONS, localized } from './translations.js'
+describe('puzzles', () => {
+  it('drops accents but keeps real letters', () => {
+    expect(lettersOf('fr', 'ÉCOLE')).toBe('ECOLE')
+    expect(lettersOf('es', 'SUEÑO')).toBe('SUEÑO')
+    expect(lettersOf('es', 'ÁRBOL')).toBe('ARBOL')
+    expect(lettersOf('vi', 'NGƯỜI')).toBe('NGƯƠI')
+    expect(lettersOf('vi', 'TIẾNG')).toBe('TIÊNG')
+  })
+  for (const code of CODES) {
+    it(`${code}: every answer is 5 letters on that keyboard, unique, with a meaning and example`, () => {
+      const list = PUZZLES[code]
+      expect(list.length).toBeGreaterThanOrEqual(25)
+      for (const p of list) {
+        expect(isValidWord(p.word, code), `${code} ${p.shown}`).toBe(true)
+        expect([...p.word]).toHaveLength(WORD_LENGTH)
+        expect(p.meaning && p.ex, p.shown).toBeTruthy()
+        expect(p.meaning.toLowerCase().includes(p.shown.toLowerCase()), `${p.shown} is in its own meaning`).toBe(false)
+      }
+      expect(new Set(list.map((p) => p.word)).size).toBe(list.length)
+      expect(keyRows(code).flat().length).toBeGreaterThan(20)
+    })
+  }
+  it('picks a daily puzzle for any day in every language', () => { for (const c of CODES) expect(dailyPuzzle(c, -3)).toBeTruthy() })
+})
 
 describe('languages', () => {
   it('has every UI string in every language', () => {
-    for (const [key, row] of Object.entries(STR)) for (const [code] of LANGUAGES) expect(row[code], `${key}/${code}`).toBeTruthy()
+    for (const [key, row] of Object.entries(STR)) for (const code of CODES) expect(row[code], `${key}/${code}`).toBeTruthy()
   })
-  it('translates every puzzle into every language', () => {
-    for (const p of PUZZLES) for (const code of ['sr', 'fr', 'es', 'vi']) expect(TRANSLATIONS[p.id]?.[code]?.[0], `${p.id}/${code}`).toBeTruthy()
-  })
-  it('fills in values and falls back to English', () => {
-    expect(translate('fr', 'solvedIn', { n: 3 })).toContain('3')
-    expect(localized(PUZZLES[0], 'en').english).toBe(PUZZLES[0].english)
-    expect(localized(PUZZLES[0], 'sr').en).toBeNull()
-  })
+  it('fills in values', () => expect(translate('fr', 'solvedIn', { n: 3 })).toContain('3'))
 })

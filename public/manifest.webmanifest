@@ -1,7 +1,7 @@
 {
   "name": "Wurdle",
   "short_name": "Wurdle",
-  "description": "A Serbian word game.",
+  "description": "A word game in English, Serbian, French, Spanish and Vietnamese.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f2a52",

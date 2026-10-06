@@ -2,14 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import Icon from '../components/Icons.jsx'
 import CopyButton from '../components/CopyButton.jsx'
-import { PUZZLES, dailyPuzzle, dayNumber } from '../lib/puzzles.js'
-import { DIFFICULTIES, KEY_ROWS, LETTERS, WORD_LENGTH, hardModeError, isValidWord, keyStates, scoreGuess, shareText, showHint } from '../lib/engine.js'
+import { puzzlesFor, dailyPuzzle, dayNumber } from '../lib/words/index.js'
+import { DIFFICULTIES, keyRows, lettersFor, WORD_LENGTH, hardModeError, isValidWord, keyStates, scoreGuess, shareText, showHint } from '../lib/engine.js'
 import { useWurdle } from '../lib/store.jsx'
 import { useT } from '../lib/i18n.js'
-import { localized } from '../lib/translations.js'
 
-const pickRandom = (not) => {
-  const pool = PUZZLES.filter((p) => p.id !== not)
+const pickRandom = (list, not) => {
+  const pool = list.filter((p) => p.id !== not)
   return pool[Math.floor(Math.random() * pool.length)]
 }
 
@@ -18,21 +17,24 @@ export default function WurdleGame({ mode }) {
   const navigate = useNavigate()
   const t = useT()
   const { data, saveGame } = useWurdle()
-  const [practice, setPractice] = useState(() => ({ puzzle: pickRandom(), round: 0 }))
+  const lang = data.language
+  const list = puzzlesFor(lang)
+  const [practice, setPractice] = useState(() => ({ puzzle: pickRandom(list), round: 0 }))
 
   let puzzle, key, title
-  if (mode === 'daily') { puzzle = dailyPuzzle(); key = `daily-${dayNumber()}`; title = 'daily' }
-  else if (mode === 'puzzle') { puzzle = PUZZLES.find((p) => p.id === Number(n)); key = `puzzle-${n}`; title = `#${n}` }
-  else { puzzle = practice.puzzle; key = null; title = 'practice' }
+  if (mode === 'daily') { puzzle = dailyPuzzle(lang); key = `${lang}-daily-${dayNumber()}`; title = 'daily' }
+  else if (mode === 'puzzle') { puzzle = list.find((p) => p.id === Number(n)); key = `${lang}-puzzle-${n}`; title = `#${n}` }
+  else { puzzle = practice.puzzle?.lang === lang ? practice.puzzle : list[0]; key = null; title = 'practice' }
 
   if (!puzzle) return <p className="empty">Puzzle not found. <Link to="/">{t('backToWurdle')}</Link></p>
   // A fresh component per game so no typing state leaks between puzzles.
-  return <Board key={key || `practice-${practice.round}`} {...{ puzzle, gameKey: key, title, mode, data, saveGame, navigate, again: () => setPractice((p) => ({ puzzle: pickRandom(p.puzzle.id), round: p.round + 1 })) }} />
+  return <Board key={key || `practice-${practice.round}`} {...{ puzzle, gameKey: key, title, mode, data, saveGame, navigate, list, again: () => setPractice((p) => ({ puzzle: pickRandom(list, puzzle.id), round: p.round + 1 })) }} />
 }
 
-function Board({ puzzle, gameKey, title, mode, data, saveGame, navigate, again }) {
+function Board({ puzzle, gameKey, title, mode, data, saveGame, navigate, again, list }) {
   const t = useT()
-  const text = localized(puzzle, data.language)
+  const lang = data.language
+  const LETTERS = lettersFor(lang)
   const saved = gameKey ? data.games[gameKey] : null
   // Difficulty is locked in once the first guess is made, so it can't be switched mid-game.
   const [guesses, setGuesses] = useState(saved?.guesses || [])
@@ -64,7 +66,7 @@ function Board({ puzzle, gameKey, title, mode, data, saveGame, navigate, again }
   const submit = useCallback(() => {
     if (finished || fresh >= 0) return
     const guess = currentRef.current.toUpperCase()
-    if (!isValidWord(guess)) return flash(t('needs5'))
+    if (!isValidWord(guess, lang)) return flash(t('needs5'))
     if (difficulty === 'hard') {
       const err = hardModeError(guess, guesses, answer)
       if (err) return flash(t(err[0], err[1]))
@@ -114,7 +116,7 @@ function Board({ puzzle, gameKey, title, mode, data, saveGame, navigate, again }
       </div>
 
       <p className={`wg-hint ${hinted ? '' : 'locked'}`}>
-        {hinted ? <><span>{t('meaning')}</span> {text.english}</> : DIFFICULTIES[difficulty].hint === 'never' ? t('unlocksEnd') : t('unlocksAfter', { n: DIFFICULTIES[difficulty].hint })}
+        {hinted ? <><span>{t('meaning')}</span> {puzzle.meaning}</> : DIFFICULTIES[difficulty].hint === 'never' ? t('unlocksEnd') : t('unlocksAfter', { n: DIFFICULTIES[difficulty].hint })}
       </p>
       <div className="wg-toast" role="status">{toast}</div>
 
@@ -133,21 +135,21 @@ function Board({ puzzle, gameKey, title, mode, data, saveGame, navigate, again }
       {showEnd ? (
         <div className="wend">
           <h2>{won ? (guesses.length === 1 ? t('wow') : t('bravo')) : t('nextTime')}</h2>
-          <div className="wend-word">{answer}</div>
-          {data.showPron && <div className="wend-pron">{puzzle.pron}</div>}
-          <div className="wend-en">{text.english}</div>
-          <div className="wend-ex"><em>{puzzle.sr}</em>{text.en && <span>{text.en}</span>}</div>
+          <div className="wend-word">{puzzle.shown}</div>
+          {data.showPron && puzzle.pron && <div className="wend-pron">{puzzle.pron}</div>}
+          <div className="wend-en">{puzzle.meaning}</div>
+          <div className="wend-ex"><em>{puzzle.ex}</em>{puzzle.extra && <span>{t('inEnglish')}: {puzzle.extra.meaning}. {puzzle.extra.ex}</span>}</div>
           <div className="wend-actions">
             <CopyButton text={shareText(title === 'daily' || title === 'practice' ? t(title) : title, guesses, answer, tries, won)} label={t('share')} />
             {mode === 'practice' && <button className="wbtn" onClick={again}>{t('playAnother')}</button>}
-            {mode === 'puzzle' && Number(puzzle.id) < PUZZLES.length && <button className="wbtn" onClick={() => navigate(`/puzzle/${puzzle.id + 1}`)}>{t('nextPuzzle')}</button>}
-            {mode !== 'practice' && !(mode === 'puzzle' && Number(puzzle.id) < PUZZLES.length) && <button className="wbtn" onClick={() => navigate('/')}>{t('backToWurdle')}</button>}
+            {mode === 'puzzle' && puzzle.id < list.length && <button className="wbtn" onClick={() => navigate(`/puzzle/${puzzle.id + 1}`)}>{t('nextPuzzle')}</button>}
+            {mode !== 'practice' && !(mode === 'puzzle' && puzzle.id < list.length) && <button className="wbtn" onClick={() => navigate('/')}>{t('backToWurdle')}</button>}
             <Link to="/" className="wlink">{t('wurdleHome')}</Link>
           </div>
         </div>
       ) : (
         <div className="wkeys" aria-label="Keyboard">
-          {KEY_ROWS.map((row, i) => (
+          {keyRows(lang).map((row, i) => (
             <div key={i} className="wkrow">
               {row.map((k) => (
                 <button key={k} className={`wkey ${states[k] || ''} ${k.length > 1 ? 'wide' : ''}`} onClick={() => press(k)} aria-label={k === 'back' ? 'Delete' : k === 'enter' ? 'Enter' : k}>

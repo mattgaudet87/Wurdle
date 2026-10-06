@@ -1,13 +1,17 @@
 // Pure Wurdle rules: scoring, keyboard colours, hard-mode checks, difficulty table.
 export const WORD_LENGTH = 5
 
-// Serbian Latin letters that fit in one tile (lj, nj, dž are not used in answers).
-export const KEY_ROWS = [
-  ['e', 'r', 't', 'z', 'u', 'i', 'o', 'p', 'š', 'đ'],
-  ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'č', 'ć'],
-  ['enter', 'ž', 'c', 'v', 'b', 'n', 'm', 'back'],
-]
-export const LETTERS = new Set(KEY_ROWS.flat().filter((k) => k.length === 1))
+// On-screen keyboard per language (each key is one tile). Accents are not typed in en, fr, es (except ñ) and vi tones.
+const ROW3 = (keys) => ['enter', ...keys, 'back']
+export const KEYBOARDS = {
+  en: [['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'], ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l'], ROW3(['z', 'x', 'c', 'v', 'b', 'n', 'm'])],
+  fr: [['a', 'z', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'], ['q', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm'], ROW3(['w', 'x', 'c', 'v', 'b', 'n'])],
+  es: [['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'], ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'ñ'], ROW3(['z', 'x', 'c', 'v', 'b', 'n', 'm'])],
+  sr: [['e', 'r', 't', 'z', 'u', 'i', 'o', 'p', 'š', 'đ'], ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'č', 'ć'], ROW3(['ž', 'c', 'v', 'b', 'n', 'm'])],
+  vi: [['a', 'ă', 'â', 'e', 'ê', 'i', 'o', 'ô', 'ơ', 'u', 'ư', 'y'], ['b', 'c', 'd', 'đ', 'g', 'h', 'k', 'l', 'm', 'n'], ROW3(['p', 'q', 'r', 's', 't', 'v', 'x'])],
+}
+export const keyRows = (lang) => KEYBOARDS[lang] || KEYBOARDS.en
+export const lettersFor = (lang) => new Set(keyRows(lang).flat().filter((k) => k.length === 1))
 
 export const DIFFICULTIES = {
   easy: { tries: 7, hint: 'always' },
@@ -54,7 +58,11 @@ export function hardModeError(guess, guesses, answer) {
   return null
 }
 
-export const isValidWord = (guess) => [...guess.toLowerCase()].length === WORD_LENGTH && [...guess.toLowerCase()].every((c) => LETTERS.has(c))
+export const isValidWord = (guess, lang) => {
+  const letters = [...guess.toLowerCase()]
+  const ok = lettersFor(lang)
+  return letters.length === WORD_LENGTH && letters.every((c) => ok.has(c))
+}
 
 export const showHint = (difficulty, guessCount, finished) => {
   if (finished) return true
