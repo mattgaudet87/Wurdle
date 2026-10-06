@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="96" fill="#0f2a52"/>
+<g font-family="Helvetica,Arial,sans-serif" font-weight="800" font-size="120" fill="#fff" text-anchor="middle">
+<rect x="56" y="136" width="124" height="124" rx="16" fill="#2f8f4e"/><text x="118" y="226">W</text>
+<rect x="194" y="136" width="124" height="124" rx="16" fill="#c99a1a"/><text x="256" y="226">U</text>
+<rect x="332" y="136" width="124" height="124" rx="16" fill="#6b7692"/><text x="394" y="226">R</text>
+<rect x="56" y="274" width="124" height="124" rx="16" fill="#6b7692"/><text x="118" y="364">D</text>
+<rect x="194" y="274" width="124" height="124" rx="16" fill="#2f8f4e"/><text x="256" y="364">L</text>
+<rect x="332" y="274" width="124" height="124" rx="16" fill="#c99a1a"/><text x="394" y="364">E</text></g></svg>
